@@ -1,0 +1,970 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Souls-like Game Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #171a21, #1b2838);
+            color: #c7d5e0;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 40px;
+            font-size: 2.5rem;
+            font-weight: 300;
+            background: linear-gradient(90deg, #66c0f4, #7cc7f7, #8ed8ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        .categories {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 30px;
+            margin-bottom: 40px;
+        }
+
+        .category {
+            background: linear-gradient(135deg, rgba(42, 71, 94, 0.3), rgba(27, 40, 56, 0.4));
+            border-radius: 6px;
+            padding: 20px;
+            min-height: 400px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(102, 192, 244, 0.2);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05);
+            transition: all 0.3s ease;
+        }
+
+        .category.drag-over {
+            border-color: #66c0f4;
+            background: linear-gradient(135deg, rgba(102, 192, 244, 0.2), rgba(124, 199, 247, 0.15));
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(102, 192, 244, 0.3), 0 0 0 1px rgba(102, 192, 244, 0.5);
+        }
+
+        .category h2 {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 12px;
+            border-radius: 3px;
+            font-size: 1.3rem;
+            font-weight: 400;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #c7d5e0;
+        }
+
+        .not-played h2 {
+            background: linear-gradient(90deg, #3d4f5c, #4a5f73);
+            border-left: 4px solid #66c0f4;
+        }
+
+        .currently-playing h2 {
+            background: linear-gradient(90deg, #b8860b, #cd950c);
+            border-left: 4px solid #f0b90b;
+        }
+
+        .finished h2 {
+            background: linear-gradient(90deg, #4c8c4a, #5cb85c);
+            border-left: 4px solid #6cc04a;
+        }
+
+        .next-to-play h2 {
+            background: linear-gradient(90deg, #405f9e, #5073b8);
+            border-left: 4px solid #66c0f4;
+        }
+
+        .game-card {
+            background: linear-gradient(135deg, rgba(62, 70, 82, 0.8), rgba(45, 50, 58, 0.9));
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 15px;
+            cursor: grab;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(102, 192, 244, 0.1);
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+        }
+
+        .game-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(102, 192, 244, 0.4);
+            border-color: rgba(102, 192, 244, 0.3);
+            background: linear-gradient(135deg, rgba(72, 80, 92, 0.9), rgba(55, 60, 68, 1));
+        }
+
+        .game-card.dragging {
+            opacity: 0.7;
+            transform: rotate(5deg);
+            z-index: 1000;
+        }
+
+        .game-card img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 3px;
+            margin-bottom: 10px;
+            transition: transform 0.3s ease;
+            background: linear-gradient(135deg, #2a475e, #364c63);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #c7d5e0;
+            font-size: 14px;
+            pointer-events: none;
+            border: 1px solid rgba(102, 192, 244, 0.2);
+        }
+
+        .game-card .image-placeholder {
+            width: 100%;
+            height: 150px;
+            background: linear-gradient(135deg, #2a475e, #364c63);
+            border-radius: 3px;
+            margin-bottom: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #c7d5e0;
+            font-size: 16px;
+            text-align: center;
+            border: 1px dashed rgba(102, 192, 244, 0.4);
+            pointer-events: none;
+        }
+
+        .game-card .image-placeholder .game-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .game-card:hover img {
+            transform: scale(1.05);
+        }
+
+        .game-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-align: center;
+            color: #c7d5e0;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+        }
+
+        .game-subtitle {
+            font-size: 0.9rem;
+            color: #8f98a0;
+            text-align: center;
+            font-style: italic;
+            opacity: 0.8;
+        }
+
+        .add-game-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(90deg, #4c6b22, #6ca24c);
+            border: 1px solid rgba(102, 192, 244, 0.3);
+            border-radius: 3px;
+            color: #c7d5e0;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 20px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .add-game-btn:hover {
+            background: linear-gradient(90deg, #5c7b32, #7cb25c);
+            border-color: rgba(102, 192, 244, 0.5);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+            transform: translateY(-1px);
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.85);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-content {
+            background: linear-gradient(135deg, #2a475e, #1b2838);
+            padding: 30px;
+            border-radius: 6px;
+            width: 90%;
+            max-width: 500px;
+            border: 1px solid rgba(102, 192, 244, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8);
+        }
+
+        .game-card-actions {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 10;
+        }
+
+        .game-card:hover .game-card-actions {
+            opacity: 1;
+        }
+
+        .action-btn {
+            background: rgba(23, 26, 33, 0.9);
+            border: 1px solid rgba(102, 192, 244, 0.3);
+            border-radius: 3px;
+            width: 32px;
+            height: 32px;
+            color: #c7d5e0;
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .action-btn:hover {
+            background: rgba(42, 71, 94, 0.9);
+            border-color: rgba(102, 192, 244, 0.6);
+            transform: scale(1.05);
+        }
+
+        .edit-btn {
+            background: rgba(64, 95, 158, 0.8);
+            border-color: rgba(102, 192, 244, 0.5);
+        }
+
+        .edit-btn:hover {
+            background: rgba(74, 105, 168, 1);
+            border-color: rgba(102, 192, 244, 0.8);
+        }
+
+        .delete-btn {
+            background: rgba(162, 61, 61, 0.8);
+            border-color: rgba(255, 102, 102, 0.5);
+        }
+
+        .delete-btn:hover {
+            background: rgba(172, 71, 71, 1);
+            border-color: rgba(255, 102, 102, 0.8);
+        }
+
+        .modal input,
+        .modal select {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid rgba(102, 192, 244, 0.3);
+            border-radius: 3px;
+            background: rgba(23, 26, 33, 0.8);
+            color: #c7d5e0;
+            font-size: 1rem;
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .modal input::placeholder {
+            color: #8f98a0;
+        }
+
+        .modal input:focus,
+        .modal select:focus {
+            outline: none;
+            border-color: rgba(102, 192, 244, 0.6);
+            background: rgba(23, 26, 33, 0.9);
+            box-shadow: 0 0 0 2px rgba(102, 192, 244, 0.2);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+        }
+
+        .modal-buttons button {
+            flex: 1;
+            padding: 12px;
+            border: 1px solid rgba(102, 192, 244, 0.3);
+            border-radius: 3px;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .save-btn {
+            background: linear-gradient(90deg, #4c6b22, #6ca24c);
+            color: #c7d5e0;
+        }
+
+        .save-btn:hover {
+            background: linear-gradient(90deg, #5c7b32, #7cb25c);
+            border-color: rgba(102, 192, 244, 0.5);
+        }
+
+        .cancel-btn {
+            background: linear-gradient(90deg, #a23d3d, #c44747);
+            color: #c7d5e0;
+        }
+
+        .cancel-btn:hover {
+            background: linear-gradient(90deg, #b24d4d, #d45757);
+            border-color: rgba(255, 102, 102, 0.5);
+        }
+
+        .play-btn {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(90deg, #4c6b22, #6ca24c);
+            border: 1px solid rgba(102, 192, 244, 0.3);
+            border-radius: 3px;
+            color: #c7d5e0;
+            padding: 8px 16px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            opacity: 0;
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        .game-card:hover .play-btn {
+            opacity: 1;
+        }
+
+        .play-btn:hover {
+            background: linear-gradient(90deg, #5c7b32, #7cb25c);
+            border-color: rgba(102, 192, 244, 0.5);
+            transform: translateX(-50%) translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .play-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            background: linear-gradient(90deg, #3d4f5c, #4a5f73);
+        }
+
+        .play-btn:disabled:hover {
+            transform: translateX(-50%);
+            box-shadow: none;
+        }
+
+        @media (max-width: 768px) {
+            .categories {
+                grid-template-columns: 1fr;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>🎮 Souls-like Game Tracker</h1>
+
+        <div class="categories">
+            <div class="category not-played" data-category="not-played">
+                <h2>🕹️ Not Played</h2>
+                <div class="games-list" id="not-played-list"></div>
+                <button class="add-game-btn" onclick="openModal('not-played')">+ Ajouter un jeu</button>
+            </div>
+
+            <div class="category currently-playing" data-category="currently-playing">
+                <h2>🎯 Currently Playing</h2>
+                <div class="games-list" id="currently-playing-list"></div>
+                <button class="add-game-btn" onclick="openModal('currently-playing')">+ Ajouter un jeu</button>
+            </div>
+
+            <div class="category finished" data-category="finished">
+                <h2>✅ Finished</h2>
+                <div class="games-list" id="finished-list"></div>
+                <button class="add-game-btn" onclick="openModal('finished')">+ Ajouter un jeu</button>
+            </div>
+
+            <div class="category next-to-play" data-category="next-to-play">
+                <h2>⏭️ Next to Play</h2>
+                <div class="games-list" id="next-to-play-list"></div>
+                <button class="add-game-btn" onclick="openModal('next-to-play')">+ Ajouter un jeu</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal pour ajouter/modifier un jeu -->
+    <div class="modal" id="gameModal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Ajouter un nouveau jeu</h2>
+            <input type="text" id="gameTitle" placeholder="Nom du jeu (ex: Dark Souls III)">
+            <input type="text" id="gameSubtitle" placeholder="Sous-titre (ex: The Fire Fades Edition)">
+            <input type="url" id="gameImage" placeholder="URL de l'image (automatique pour les jeux populaires)">
+            <input type="url" id="gameLaunchUrl" placeholder="URL de lancement (Steam, Epic, etc.)">
+            <div style="font-size: 0.9rem; color: #8f98a0; margin: 5px 0; line-height: 1.4;">
+                💡 <strong>Images automatiques</strong> pour les souls-like populaires !<br><br>
+                🎮 <strong>URLs de lancement supportées :</strong><br>
+                • <strong>Steam :</strong> <code>steam://run/374320</code> (Dark Souls III)<br>
+                • <strong>Epic :</strong> <code>epic://launch/ProductId</code><br>
+                • <strong>Web :</strong> <code>https://store.steampowered.com/app/374320/</code><br><br>
+                ❌ <strong>Chemins locaux (.exe) ne fonctionnent pas</strong> dans les navigateurs<br>
+                ✅ <strong>Trouvez l'App ID :</strong> SteamDB.info ou propriétés du jeu Steam
+            </div>
+            <div class="modal-buttons">
+                <button class="save-btn" onclick="saveGame()">Sauvegarder</button>
+                <button class="cancel-btn" onclick="closeModal()">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Données initiales des jeux souls-like populaires
+        const defaultGames = {
+            'not-played': [
+                {
+                    id: 1,
+                    title: 'Elden Ring',
+                    subtitle: 'Shadow of the Erdtree',
+                    image: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1245620/header.jpg?t=1726158298',
+                    launchUrl: 'steam://run/1245620'
+                },
+                {
+                    id: 2,
+                    title: 'Sekiro',
+                    subtitle: 'Shadows Die Twice',
+                    image: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/814380/header.jpg?t=1678296348',
+                    launchUrl: 'steam://run/814380'
+                }
+            ],
+            'currently-playing': [
+                {
+                    id: 3,
+                    title: 'Dark Souls III',
+                    subtitle: 'The Fire Fades Edition',
+                    image: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/374320/header.jpg?t=1671485009',
+                    launchUrl: 'steam://run/374320'
+                }
+            ],
+            'finished': [
+                {
+                    id: 4,
+                    title: 'Bloodborne',
+                    subtitle: 'Game of the Year Edition',
+                    image: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1073600/header.jpg?t=1635513138',
+                    launchUrl: 'https://store.playstation.com/concept/228631'
+                }
+            ],
+            'next-to-play': [
+                {
+                    id: 5,
+                    title: 'Hollow Knight',
+                    subtitle: 'Voidheart Edition',
+                    image: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/367520/header.jpg?t=1695270428',
+                    launchUrl: 'steam://run/367520'
+                }
+            ]
+        };
+
+        let games = {};
+        let currentCategory = '';
+        let gameIdCounter = 6;
+        let editingGame = null;
+
+        // Base de données d'images pour les jeux populaires
+        const gameImages = {
+            // Souls-like populaires
+            'dark souls': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/211420/header.jpg?t=1561449221',
+            'dark souls ii': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/236430/header.jpg?t=1661953173',
+            'dark souls iii': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/374320/header.jpg?t=1671485009',
+            'dark souls 2': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/236430/header.jpg?t=1661953173',
+            'dark souls 3': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/374320/header.jpg?t=1671485009',
+            'elden ring': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1245620/header.jpg?t=1726158298',
+            'sekiro': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/814380/header.jpg?t=1678296348',
+            'sekiro shadows die twice': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/814380/header.jpg?t=1678296348',
+            'bloodborne': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1073600/header.jpg?t=1635513138',
+            'hollow knight': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/367520/header.jpg?t=1695270428',
+            'nioh': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/485510/header.jpg?t=1706205085',
+            'nioh 2': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1325200/header.jpg?t=1679332447',
+            'code vein': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/678960/header.jpg?t=1700127522',
+            'remnant from the ashes': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/617290/header.jpg?t=1691518031',
+            'remnant 2': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1282100/header.jpg?t=1711036006',
+            'salt and sanctuary': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/283640/header.jpg?t=1601474199',
+            'blasphemous': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/774361/header.jpg?t=1692886764',
+            'lords of the fallen': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/265300/header.jpg?t=1698164568',
+            'the surge': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/378540/header.jpg?t=1658245043',
+            'the surge 2': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/644830/header.jpg?t=1658245092',
+            'ashen': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/649950/header.jpg?t=1673468092',
+            'mortal shell': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1110910/header.jpg?t=1666777692',
+            'lies of p': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1627720/header.jpg?t=1701158376',
+            'wo long fallen dynasty': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1448440/header.jpg?t=1695118436',
+            'stellar blade': 'https://image.api.playstation.com/vulcan/ap/rnd/202312/0117/36ad2b8ee0b91d4db6d5c5b0fd3dd938e9b3d37db8c60a74.png',
+            'demon souls': 'https://image.api.playstation.com/vulcan/ap/rnd/202008/1020/PRfYtTZQsuj3ALrBXGL8MjAH.png',
+            'lords of the fallen 2023': 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/1501750/header.jpg?t=1705593456'
+        };
+
+        // Fonctions de sauvegarde et chargement localStorage
+        function saveToLocalStorage() {
+            try {
+                const dataToSave = {
+                    games: games,
+                    gameIdCounter: gameIdCounter
+                };
+                localStorage.setItem('souls-like-tracker', JSON.stringify(dataToSave));
+                console.log('Données sauvegardées avec succès');
+            } catch (error) {
+                console.error('Erreur lors de la sauvegarde:', error);
+            }
+        }
+
+        function loadFromLocalStorage() {
+            try {
+                const savedData = localStorage.getItem('souls-like-tracker');
+                if (savedData) {
+                    const parsedData = JSON.parse(savedData);
+                    games = parsedData.games || defaultGames;
+                    gameIdCounter = parsedData.gameIdCounter || 6;
+                    console.log('Données chargées avec succès');
+                } else {
+                    // Première visite, utiliser les données par défaut
+                    games = JSON.parse(JSON.stringify(defaultGames));
+                    console.log('Première visite, utilisation des données par défaut');
+                }
+            } catch (error) {
+                console.error('Erreur lors du chargement:', error);
+                // En cas d'erreur, utiliser les données par défaut
+                games = JSON.parse(JSON.stringify(defaultGames));
+            }
+        }
+
+        // Fonction pour rechercher automatiquement une image basée sur le titre
+        function findGameImage(title) {
+            if (!title) return '';
+
+            // Normaliser le titre pour la recherche (minuscules, suppression caractères spéciaux)
+            const normalizedTitle = title.toLowerCase()
+                .replace(/[®™©]/g, '') // Supprimer les marques commerciales
+                .replace(/:\s*/, ' ') // Remplacer : par espace
+                .replace(/\s+/g, ' ') // Remplacer espaces multiples par un seul
+                .trim();
+
+            // Recherche directe
+            if (gameImages[normalizedTitle]) {
+                return gameImages[normalizedTitle];
+            }
+
+            // Recherche partielle - chercher si le titre contient un des jeux de la base
+            for (const [gameName, imageUrl] of Object.entries(gameImages)) {
+                if (normalizedTitle.includes(gameName) || gameName.includes(normalizedTitle)) {
+                    return imageUrl;
+                }
+            }
+
+            // Recherche par mots-clés
+            const keywords = normalizedTitle.split(' ');
+            for (const [gameName, imageUrl] of Object.entries(gameImages)) {
+                const gameWords = gameName.split(' ');
+                const matchCount = keywords.filter(keyword =>
+                    gameWords.some(gameWord => gameWord.includes(keyword) || keyword.includes(gameWord))
+                ).length;
+
+                // Si au moins 60% des mots correspondent
+                if (matchCount >= Math.ceil(keywords.length * 0.6) && matchCount >= 1) {
+                    return imageUrl;
+                }
+            }
+
+            return ''; // Aucune image trouvée
+        }
+
+        // Fonction pour mettre à jour automatiquement l'image quand le titre change
+        function autoFillImage() {
+            const titleInput = document.getElementById('gameTitle');
+            const imageInput = document.getElementById('gameImage');
+
+            if (titleInput && imageInput && titleInput.value.trim()) {
+                const foundImage = findGameImage(titleInput.value.trim());
+                if (foundImage && !imageInput.value.trim()) {
+                    imageInput.value = foundImage;
+                    // Ajouter un feedback visuel
+                    imageInput.style.borderColor = '#28a745';
+                    setTimeout(() => {
+                        imageInput.style.borderColor = '';
+                    }, 1000);
+                }
+            }
+        }
+
+        // Fonction debounce pour limiter les appels
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+
+        // Fonction pour lancer un jeu
+        function launchGame(launchUrl) {
+            if (!launchUrl) {
+                alert('Aucune URL de lancement configurée pour ce jeu.');
+                return;
+            }
+
+            // Vérifier si c'est un chemin local (non supporté)
+            if (launchUrl.includes(':\\') || launchUrl.includes('.exe')) {
+                alert('❌ Les chemins locaux (.exe) ne sont pas supportés dans les navigateurs.\n\n✅ Utilisez plutôt :\n• steam://run/[AppID]\n• epic://launch/[ProductId]\n• URL web du store\n\nTrouvez l\'App ID sur SteamDB.info');
+                return;
+            }
+
+            try {
+                // Ouvrir l'URL dans un nouvel onglet/fenêtre
+                window.open(launchUrl, '_blank');
+                console.log(`Lancement du jeu: ${launchUrl}`);
+
+                // Message informatif selon le type d'URL
+                if (launchUrl.startsWith('steam://')) {
+                    console.log('Steam devrait s\'ouvrir et lancer le jeu...');
+                } else if (launchUrl.startsWith('epic://')) {
+                    console.log('Epic Games Launcher devrait s\'ouvrir...');
+                } else {
+                    console.log('Ouverture de la page du jeu dans le navigateur...');
+                }
+            } catch (error) {
+                console.error('Erreur lors du lancement du jeu:', error);
+                alert('Impossible de lancer le jeu. Vérifiez que Steam ou le client approprié est installé.');
+            }
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function () {
+            loadFromLocalStorage();
+            renderAllGames();
+            setupDragAndDrop();
+        });
+
+        function renderAllGames() {
+            Object.keys(games).forEach(category => {
+                renderCategory(category);
+            });
+        }
+
+        function renderCategory(category) {
+            const container = document.getElementById(`${category}-list`);
+            container.innerHTML = '';
+
+            games[category].forEach(game => {
+                const gameCard = createGameCard(game);
+                container.appendChild(gameCard);
+            });
+        }
+
+        function createGameCard(game) {
+            const card = document.createElement('div');
+            card.className = 'game-card';
+            card.draggable = true;
+            card.dataset.gameId = game.id;
+
+            // Créer l'élément image avec gestion d'erreur avancée
+            const imageElement = createImageElement(game);
+
+            card.innerHTML = `
+                <div class="game-card-actions">
+                    <button class="action-btn edit-btn" onclick="editGame(${game.id})" title="Modifier">✏️</button>
+                    <button class="action-btn delete-btn" onclick="deleteGame(${game.id})" title="Supprimer">🗑️</button>
+                </div>
+                ${imageElement}
+                <div class="game-title">${game.title}</div>
+                <div class="game-subtitle">${game.subtitle}</div>
+                ${game.launchUrl ? `<button class="play-btn" onclick="launchGame('${game.launchUrl}')" title="Lancer le jeu">▶ Play</button>` : ''}
+            `;
+
+            // Double-clic pour éditer
+            card.addEventListener('dblclick', function (e) {
+                e.preventDefault();
+                editGame(game.id);
+            });
+
+            return card;
+        }
+
+        function createImageElement(game) {
+            // Si pas d'image ou image par défaut, créer un placeholder
+            if (!game.image || game.image.includes('data:image/svg+xml')) {
+                return `
+                    <div class="image-placeholder">
+                        <div class="game-icon">🎮</div>
+                        <div>${game.title}</div>
+                    </div>
+                `;
+            }
+
+            // Sinon, essayer de charger l'image avec fallback
+            return `
+                <img src="${game.image}" 
+                     alt="${game.title}" 
+                     onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+                     style="display: block;">
+                <div class="image-placeholder" style="display: none;">
+                    <div class="game-icon">🎮</div>
+                    <div>${game.title}</div>
+                </div>
+            `;
+        }
+
+        function setupDragAndDrop() {
+            // Événements pour les cartes (drag)
+            document.addEventListener('dragstart', function (e) {
+                if (e.target.classList.contains('game-card')) {
+                    e.target.classList.add('dragging');
+                    e.dataTransfer.setData('text/plain', e.target.dataset.gameId);
+                }
+            });
+
+            document.addEventListener('dragend', function (e) {
+                if (e.target.classList.contains('game-card')) {
+                    e.target.classList.remove('dragging');
+                }
+            });
+
+            // Empêcher le drag sur les boutons d'action
+            document.addEventListener('mousedown', function (e) {
+                if (e.target.classList.contains('action-btn')) {
+                    e.preventDefault();
+                    const card = e.target.closest('.game-card');
+                    if (card) {
+                        card.draggable = false;
+                        setTimeout(() => {
+                            card.draggable = true;
+                        }, 100);
+                    }
+                }
+            });
+
+            // Événements pour les catégories (drop)
+            document.querySelectorAll('.category').forEach(category => {
+                category.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    this.classList.add('drag-over');
+                });
+
+                category.addEventListener('dragleave', function (e) {
+                    if (!this.contains(e.relatedTarget)) {
+                        this.classList.remove('drag-over');
+                    }
+                });
+
+                category.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    this.classList.remove('drag-over');
+
+                    const gameId = parseInt(e.dataTransfer.getData('text/plain'));
+                    const targetCategory = this.dataset.category;
+
+                    moveGame(gameId, targetCategory);
+                });
+            });
+        }
+
+        function moveGame(gameId, targetCategory) {
+            let game = null;
+            let sourceCategory = null;
+
+            // Trouver le jeu et sa catégorie source
+            Object.keys(games).forEach(category => {
+                const gameIndex = games[category].findIndex(g => g.id === gameId);
+                if (gameIndex !== -1) {
+                    game = games[category][gameIndex];
+                    sourceCategory = category;
+                    games[category].splice(gameIndex, 1);
+                }
+            });
+
+            if (game && sourceCategory !== targetCategory) {
+                games[targetCategory].push(game);
+                renderCategory(sourceCategory);
+                renderCategory(targetCategory);
+                saveToLocalStorage();
+            }
+        }
+
+        function openModal(category) {
+            currentCategory = category;
+            editingGame = null;
+            document.getElementById('modalTitle').textContent = 'Ajouter un nouveau jeu';
+            document.getElementById('gameModal').style.display = 'flex';
+
+            // Ajouter l'écouteur d'événement pour la recherche automatique d'image
+            const titleInput = document.getElementById('gameTitle');
+            titleInput.addEventListener('blur', autoFillImage);
+            titleInput.addEventListener('input', debounce(autoFillImage, 500));
+
+            titleInput.focus();
+        }
+
+        function editGame(gameId) {
+            // Trouver le jeu et sa catégorie
+            let game = null;
+            let category = null;
+
+            Object.keys(games).forEach(cat => {
+                const foundGame = games[cat].find(g => g.id === gameId);
+                if (foundGame) {
+                    game = foundGame;
+                    category = cat;
+                }
+            });
+
+            if (game) {
+                editingGame = { id: gameId, category: category };
+                currentCategory = category;
+
+                // Remplir le formulaire avec les données existantes
+                document.getElementById('modalTitle').textContent = 'Modifier le jeu';
+                document.getElementById('gameTitle').value = game.title;
+                document.getElementById('gameSubtitle').value = game.subtitle;
+                document.getElementById('gameImage').value = game.image;
+                document.getElementById('gameLaunchUrl').value = game.launchUrl || '';
+
+                document.getElementById('gameModal').style.display = 'flex';
+
+                // Ajouter l'écouteur d'événement pour la recherche automatique d'image
+                const titleInput = document.getElementById('gameTitle');
+                titleInput.addEventListener('blur', autoFillImage);
+                titleInput.addEventListener('input', debounce(autoFillImage, 500));
+
+                titleInput.focus();
+            }
+        }
+
+        function deleteGame(gameId) {
+            if (confirm('Êtes-vous sûr de vouloir supprimer ce jeu ?')) {
+                Object.keys(games).forEach(category => {
+                    const gameIndex = games[category].findIndex(g => g.id === gameId);
+                    if (gameIndex !== -1) {
+                        games[category].splice(gameIndex, 1);
+                        renderCategory(category);
+                        saveToLocalStorage();
+                    }
+                });
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('gameModal').style.display = 'none';
+            document.getElementById('gameTitle').value = '';
+            document.getElementById('gameSubtitle').value = '';
+            document.getElementById('gameImage').value = '';
+            document.getElementById('gameLaunchUrl').value = '';
+
+            // Nettoyer les écouteurs d'événements
+            const titleInput = document.getElementById('gameTitle');
+            titleInput.removeEventListener('blur', autoFillImage);
+            titleInput.removeEventListener('input', debounce(autoFillImage, 500));
+
+            editingGame = null;
+        }
+
+        function saveGame() {
+            const title = document.getElementById('gameTitle').value.trim();
+            const subtitle = document.getElementById('gameSubtitle').value.trim();
+            let image = document.getElementById('gameImage').value.trim();
+            const launchUrl = document.getElementById('gameLaunchUrl').value.trim();
+
+            // Si aucune image n'est fournie, essayer de la trouver automatiquement
+            if (!image && title) {
+                image = findGameImage(title);
+            }
+
+            if (title) {
+                if (editingGame) {
+                    // Mode édition : mettre à jour le jeu existant
+                    const game = games[editingGame.category].find(g => g.id === editingGame.id);
+                    if (game) {
+                        game.title = title;
+                        game.subtitle = subtitle || 'No subtitle';
+                        game.image = image || '';
+                        game.launchUrl = launchUrl || '';
+                        renderCategory(editingGame.category);
+                        saveToLocalStorage();
+                    }
+                } else {
+                    // Mode ajout : créer un nouveau jeu
+                    const newGame = {
+                        id: gameIdCounter++,
+                        title: title,
+                        subtitle: subtitle || 'No subtitle',
+                        image: image || '',
+                        launchUrl: launchUrl || ''
+                    };
+
+                    games[currentCategory].push(newGame);
+                    renderCategory(currentCategory);
+                    saveToLocalStorage();
+                }
+
+                closeModal();
+            }
+        }
+
+        // Fermer le modal en cliquant à l'extérieur
+        document.getElementById('gameModal').addEventListener('click', function (e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
+
+        // Support clavier pour le modal
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                closeModal();
+            } else if (e.key === 'Enter' && document.getElementById('gameModal').style.display === 'flex') {
+                saveGame();
+            }
+        });
+    </script>
+</body>
+
+</html>
