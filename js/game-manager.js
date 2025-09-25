@@ -38,7 +38,7 @@ async function saveData() {
     };
 
     // Toujours sauvegarder localement
-    saveData();
+    saveToLocalStorage();
 
     // Tenter la sauvegarde cloud si Firebase est configuré
     if (firebase_initialized && typeof saveToFirestore === 'function') {
