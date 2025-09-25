@@ -39,36 +39,36 @@ const firebaseConfig = {
 };
 ```
 
-### 4. Configurer dans le projet (REPO PRIVÉ 🔒)
+### 4. Configurer dans le projet (GITHUB ACTIONS 🔒)
 
-1. **Édite directement `.env.js`** avec tes vraies clés Firebase :
-   ```javascript
-   window.FIREBASE_CONFIG = {
-       apiKey: "AIzaSy...", // Ta vraie clé ici
-       authDomain: "ton-projet.firebaseapp.com",
-       projectId: "ton-projet",
-       storageBucket: "ton-projet.appspot.com",
-       messagingSenderId: "123456789",
-       appId: "1:123456789:web:abc..."
-   };
+1. **Ajoute tes secrets dans GitHub :**
+   - Va dans **Settings** de ton repo GitHub
+   - **Secrets and variables** → **Actions**
+   - Ajoute chaque secret (nom exact requis) :
+     - `FIREBASE_API_KEY` → ta vraie apiKey
+     - `FIREBASE_AUTH_DOMAIN` → ton authDomain
+     - `FIREBASE_PROJECT_ID` → ton projectId
+     - `FIREBASE_STORAGE_BUCKET` → ton storageBucket
+     - `FIREBASE_MESSAGING_SENDER_ID` → ton messagingSenderId
+     - `FIREBASE_APP_ID` → ton appId
+     - `FIREBASE_MEASUREMENT_ID` → ton measurementId (si tu l'as)
 
-   window.FIREBASE_ENABLED = true;
-   ```
+2. **Rends ton repo public :**
+   - **Settings** → **General** → descends vers **Danger Zone**
+   - **Change repository visibility** → **Make public**
 
-2. **Commite le fichier :**
-   ```bash
-   git add .env.js
-   git commit -m "Add Firebase config for private repo"
-   git push
-   ```
+3. **Active GitHub Pages :**
+   - **Settings** → **Pages**
+   - Source : **GitHub Actions**
+   - Le workflow se lancera automatiquement !
 
-3. **✅ Avantages de cette méthode (repo privé) :**
-   - **Simple** : Pas de complexité supplémentaire
-   - **Direct** : Configuration directe sur GitHub Pages
-   - **Sécurisé** : Repo privé protège les secrets
-   - **Efficace** : Déploiement immédiat
+4. **✅ Avantages de cette méthode :**
+   - **Secrets totalement cachés** dans GitHub Actions
+   - **Déploiement automatique** à chaque push
+   - **GitHub Pages gratuit** pour repos publics
+   - **Workflow professionnel**
 
-🔐 **Sécurité** : Comme ton repo est **PRIVÉ**, tes clés Firebase sont protégées !
+🔐 **Sécurité maximale** : Tes clés Firebase ne sont **JAMAIS** visibles dans le code !
 
 ### 5. Règles de sécurité Firestore (optionnel mais recommandé)
 
