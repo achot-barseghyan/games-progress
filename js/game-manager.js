@@ -7,7 +7,7 @@ let selectedPlatform = null;
 let lastSearchResults = [];
 
 // Fonctions de sauvegarde et chargement
-function saveData() {
+function saveToLocalStorage() {
     try {
         const dataToSave = {
             games: games,
