@@ -1,0 +1,19 @@
+# Variables d'environnement - SECRETS
+# .env.js est commité car le repo est PRIVÉ
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDEs
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.tmp

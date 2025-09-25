@@ -2,7 +2,12 @@
   "permissions": {
     "allow": [
       "WebSearch",
-      "WebFetch(domain:api.rawg.io)"
+      "WebFetch(domain:api.rawg.io)",
+      "Bash(python:*)",
+      "Bash(mkdir:*)",
+      "Bash(dir)",
+      "Bash(dir js)",
+      "Bash(git add:*)"
     ],
     "deny": [],
     "ask": []
