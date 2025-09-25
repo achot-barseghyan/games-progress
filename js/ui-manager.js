@@ -271,180 +271,135 @@ function moveSectionToPosition(categoryId, newIndex) {
     }
 }
 
-// API search function avec RAWG API et fallback
+// API search function avec RAWG API uniquement - recherche complète
 async function searchGamesAPI(query) {
     if (query.length < 2) return [];
 
     const RAWG_API_KEY = '205fa79ede9249dcb2e0cb4eed2f4e55';
-
-    // Ajouter quelques jeux populaires à notre base locale pour fallback
-    const additionalGames = [
-        { id: 800, name: 'Minecraft', year: 2011, platforms: ['PC Standalone'], image: 'https://www.minecraft.net/content/dam/games/minecraft/key-art/Homepage_Discover-Minecraft_940x528.jpg', rating: 4.8, developer: 'Mojang', genre: 'Sandbox' },
-        { id: 801, name: 'Fortnite', year: 2017, platforms: ['Epic Games'], image: 'https://cdn2.unrealengine.com/fortnite-chapter-4-season-4-keyart-3840x2160-b268a25de7b0.jpg', rating: 4.1, developer: 'Epic Games', genre: 'Battle Royale' },
-        { id: 802, name: 'League of Legends', year: 2009, platforms: ['PC Standalone'], image: 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Ahri_0.jpg', rating: 4.3, developer: 'Riot Games', genre: 'MOBA' },
-        { id: 803, name: 'Rocket League', year: 2015, platforms: ['Steam'], image: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/252950/header.jpg', rating: 4.4, developer: 'Psyonix', genre: 'Sports' },
-        { id: 804, name: 'Terraria', year: 2011, platforms: ['Steam'], image: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/105600/header.jpg', rating: 4.7, developer: 'Re-Logic', genre: 'Sandbox' },
-        { id: 805, name: 'Roblox', year: 2006, platforms: ['PC Standalone'], image: 'https://tr.rbxcdn.com/5a7ee2ac5dd9a52b1fb6b3c01a6f2e72/768/432/Image/Png', rating: 3.8, developer: 'Roblox Corporation', genre: 'Platform' }
-    ];
-
-    const combinedDatabase = [...gamesDatabase, ...additionalGames];
+    const allResults = new Set(); // Éviter les doublons
 
     try {
-        // Tenter d'abord une recherche locale rapide
-        const localResults = searchGamesFromDatabase(query, combinedDatabase);
-        if (localResults.length > 0) {
-            console.log('✅ Found in local database:', localResults.length, 'games');
-            // Si on a des résultats locaux, les combiner avec l'API
+        // 1. Recherche exacte avec la requête complète
+        const exactUrl = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(query)}&page_size=10&ordering=-rating`;
+        const exactResponse = await fetch(exactUrl);
+
+        if (exactResponse.ok) {
+            const exactData = await exactResponse.json();
+            console.log(`✅ RAWG exact search for "${query}":`, exactData.results.length, 'games');
+
+            exactData.results.forEach(game => {
+                allResults.add(JSON.stringify({
+                    id: `rawg_${game.id}`,
+                    name: game.name,
+                    year: game.released ? new Date(game.released).getFullYear() : 2024,
+                    platforms: game.platforms ? game.platforms.map(p => p.platform.name).slice(0, 3) : ['PC'],
+                    image: game.background_image || '',
+                    rating: Math.round((game.rating || 0) * 10) / 10,
+                    developer: game.developers && game.developers.length > 0 ? game.developers[0].name : 'Unknown',
+                    genre: game.genres && game.genres.length > 0 ? game.genres[0].name : 'Game'
+                }));
+            });
         }
 
-        // Première priorité: RAWG API avec clé (avec recherche flexible)
-        let searchQuery = query;
-        // Si la recherche échoue, essayer avec des mots individuels
-        const queryWords = query.split(' ').filter(word => word.length > 1);
+        // 2. Si recherche de plusieurs mots, essayer avec chaque mot individuellement
+        const queryWords = query.toLowerCase().split(' ').filter(word => word.length > 2);
 
-        const rawgUrl = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(searchQuery)}&page_size=8&ordering=-rating`;
-        const rawgResponse = await fetch(rawgUrl, {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json',
-                'User-Agent': 'GameProgressTracker/1.0'
+        if (queryWords.length > 1) {
+            for (const word of queryWords) {
+                const wordUrl = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(word)}&page_size=8&ordering=-rating`;
+
+                try {
+                    const wordResponse = await fetch(wordUrl);
+                    if (wordResponse.ok) {
+                        const wordData = await wordResponse.json();
+                        console.log(`✅ RAWG word search for "${word}":`, wordData.results.length, 'games');
+
+                        // Filtrer pour garder seulement les jeux qui contiennent plusieurs mots de la requête
+                        const relevantGames = wordData.results.filter(game => {
+                            const gameName = game.name.toLowerCase();
+                            const matchedWords = queryWords.filter(queryWord =>
+                                gameName.includes(queryWord)
+                            );
+                            return matchedWords.length >= Math.min(2, queryWords.length);
+                        });
+
+                        relevantGames.forEach(game => {
+                            allResults.add(JSON.stringify({
+                                id: `rawg_${game.id}`,
+                                name: game.name,
+                                year: game.released ? new Date(game.released).getFullYear() : 2024,
+                                platforms: game.platforms ? game.platforms.map(p => p.platform.name).slice(0, 3) : ['PC'],
+                                image: game.background_image || '',
+                                rating: Math.round((game.rating || 0) * 10) / 10,
+                                developer: game.developers && game.developers.length > 0 ? game.developers[0].name : 'Unknown',
+                                genre: game.genres && game.genres.length > 0 ? game.genres[0].name : 'Game'
+                            }));
+                        });
+                    }
+                } catch (wordError) {
+                    console.log(`⚠️ Word search failed for "${word}":`, wordError.message);
+                }
             }
+        }
+
+        // 3. Recherche plus large si peu de résultats
+        if (allResults.size < 3) {
+            const broadUrl = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(query)}&page_size=15&ordering=-relevance`;
+            const broadResponse = await fetch(broadUrl);
+
+            if (broadResponse.ok) {
+                const broadData = await broadResponse.json();
+                console.log(`✅ RAWG broad search for "${query}":`, broadData.results.length, 'games');
+
+                broadData.results.forEach(game => {
+                    allResults.add(JSON.stringify({
+                        id: `rawg_${game.id}`,
+                        name: game.name,
+                        year: game.released ? new Date(game.released).getFullYear() : 2024,
+                        platforms: game.platforms ? game.platforms.map(p => p.platform.name).slice(0, 3) : ['PC'],
+                        image: game.background_image || '',
+                        rating: Math.round((game.rating || 0) * 10) / 10,
+                        developer: game.developers && game.developers.length > 0 ? game.developers[0].name : 'Unknown',
+                        genre: game.genres && game.genres.length > 0 ? game.genres[0].name : 'Game'
+                    }));
+                });
+            }
+        }
+
+        // Convertir les résultats et les trier par pertinence
+        const finalResults = Array.from(allResults).map(result => JSON.parse(result));
+
+        // Tri par pertinence : exact match > partial match > rating
+        finalResults.sort((a, b) => {
+            const aExact = a.name.toLowerCase() === query.toLowerCase();
+            const bExact = b.name.toLowerCase() === query.toLowerCase();
+
+            if (aExact && !bExact) return -1;
+            if (!aExact && bExact) return 1;
+
+            const aStartsWith = a.name.toLowerCase().startsWith(query.toLowerCase());
+            const bStartsWith = b.name.toLowerCase().startsWith(query.toLowerCase());
+
+            if (aStartsWith && !bStartsWith) return -1;
+            if (!aStartsWith && bStartsWith) return 1;
+
+            return (b.rating || 0) - (a.rating || 0);
         });
 
-        if (rawgResponse.ok) {
-            const data = await rawgResponse.json();
-            console.log('✅ RAWG API success:', data.results.length, 'games found');
+        console.log(`🎯 Total unique results: ${finalResults.length}`);
+        return finalResults.slice(0, 12);
 
-            const apiResults = data.results.map(game => ({
-                id: `rawg_${game.id}`,
-                name: game.name,
-                year: game.released ? new Date(game.released).getFullYear() : 2024,
-                platforms: ['Steam'], // Par défaut Steam pour les jeux PC de RAWG
-                image: game.background_image || '',
-                rating: Math.round((game.rating || 0) * 10) / 10,
-                developer: game.developers && game.developers.length > 0 ? game.developers[0].name : 'Unknown',
-                genre: game.genres && game.genres.length > 0 ? game.genres[0].name : 'Game'
-            }));
-
-            // Combiner résultats locaux (priorité) + API
-            const localResults = searchGamesFromDatabase(query, combinedDatabase);
-            const uniqueResults = [...localResults];
-
-            // Ajouter les résultats API qui ne sont pas déjà dans les résultats locaux
-            apiResults.forEach(apiGame => {
-                const isDuplicate = uniqueResults.some(localGame =>
-                    localGame.name.toLowerCase() === apiGame.name.toLowerCase()
-                );
-                if (!isDuplicate) {
-                    uniqueResults.push(apiGame);
-                }
-            });
-
-            return uniqueResults.slice(0, 8);
-        } else {
-            console.log('⚠️ RAWG API failed with status:', rawgResponse.status);
-        }
     } catch (error) {
         console.log('❌ RAWG API error:', error.message);
+        return [];
     }
-
-    try {
-        // Fallback: FreeToGame API pour les jeux gratuits
-        const freeToGameResponse = await fetch('https://www.freetogame.com/api/games');
-        if (freeToGameResponse.ok) {
-            const games = await freeToGameResponse.json();
-            const filtered = games.filter(game =>
-                game.title.toLowerCase().includes(query.toLowerCase())
-            ).slice(0, 6);
-
-            const apiResults = filtered.map(game => ({
-                id: `free_${game.id}`,
-                name: game.title,
-                year: 2024,
-                platforms: ['PC'],
-                image: game.thumbnail || '',
-                rating: 4.0,
-                developer: game.developer || 'Unknown',
-                genre: game.genre || 'Free-to-Play'
-            }));
-
-            // Combiner avec résultats locaux
-            const localResults = searchGamesFromDatabase(query, combinedDatabase).slice(0, 2);
-            return [...localResults, ...apiResults].slice(0, 8);
-        }
-    } catch (error) {
-        console.log('❌ FreeToGame API also failed:', error.message);
-    }
-
-    // Fallback final: base de données locale uniquement
-    console.log('🔄 Using local database only');
-    return searchGamesFromDatabase(query, combinedDatabase);
 }
 
-function searchGamesFromDatabase(query, database = gamesDatabase) {
-    const normalizedQuery = query.toLowerCase().trim();
-
-    // Fonction pour calculer un score de correspondance
-    function getMatchScore(game, query) {
-        const name = game.name.toLowerCase();
-        const queryWords = query.split(' ').filter(word => word.length > 1);
-
-        let score = 0;
-
-        // Correspondance exacte (priorité maximale)
-        if (name === query) score += 100;
-
-        // Correspondance au début du nom (priorité élevée)
-        if (name.startsWith(query)) score += 50;
-
-        // Correspondance de tous les mots (priorité moyenne-élevée)
-        const matchedWords = queryWords.filter(word => name.includes(word));
-        if (matchedWords.length === queryWords.length && queryWords.length > 1) {
-            score += 30;
-        }
-
-        // Correspondance de mots individuels
-        score += matchedWords.length * 10;
-
-        // Correspondance partielle
-        if (name.includes(query)) score += 5;
-
-        return score;
-    }
-
-    return database.filter(game => {
-        const nameMatch = game.name.toLowerCase().includes(normalizedQuery);
-        const developerMatch = game.developer.toLowerCase().includes(normalizedQuery);
-        const genreMatch = game.genre.toLowerCase().includes(normalizedQuery);
-        const platformMatch = game.platforms.some(platform => platform.toLowerCase().includes(normalizedQuery));
-        const yearMatch = game.year.toString().includes(normalizedQuery);
-
-        // Recherche flexible par mots
-        const queryWords = normalizedQuery.split(' ').filter(word => word.length > 1);
-        const flexibleMatch = queryWords.some(word =>
-            game.name.toLowerCase().includes(word)
-        );
-
-        return nameMatch || developerMatch || genreMatch || platformMatch || yearMatch || flexibleMatch;
-    }).sort((a, b) => {
-        // Tri par pertinence: exact match > name match > genre match > rating
-        const aNameExact = a.name.toLowerCase() === normalizedQuery;
-        const bNameExact = b.name.toLowerCase() === normalizedQuery;
-        const aNameStart = a.name.toLowerCase().startsWith(normalizedQuery);
-        const bNameStart = b.name.toLowerCase().startsWith(normalizedQuery);
-        const aGenreMatch = a.genre.toLowerCase().includes(normalizedQuery);
-        const bGenreMatch = b.genre.toLowerCase().includes(normalizedQuery);
-
-        if (aNameExact && !bNameExact) return -1;
-        if (!aNameExact && bNameExact) return 1;
-        if (aNameStart && !bNameStart) return -1;
-        if (!aNameStart && bNameStart) return 1;
-        if (aGenreMatch && !bGenreMatch) return -1;
-        if (!aGenreMatch && bGenreMatch) return 1;
-
-        // Enfin, tri par note (meilleure note d'abord)
-        return b.rating - a.rating;
-    }).slice(0, 8);
+// Cette fonction n'est plus utilisée - tout se fait via RAWG API
+// Conservée pour compatibilité mais vide
+function searchGamesFromDatabase(query, database = []) {
+    console.log('🚫 Local database search disabled - using RAWG API only');
+    return [];
 }
 
 // Fonctions de gestion de la recherche
