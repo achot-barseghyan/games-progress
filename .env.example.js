@@ -1,7 +1,7 @@
 // Template pour la configuration Firebase
-// 1. Copie ce fichier vers .env.js
+// 1. Copie ce fichier vers config.js
 // 2. Remplace les valeurs par tes vraies clés Firebase
-// 3. Le fichier .env.js ne sera pas commité (sécurité)
+// 3. Le fichier config.js contient tes secrets Firebase
 
 window.FIREBASE_CONFIG = {
     apiKey: "AIzaSy...", // Obtenir depuis Firebase Console

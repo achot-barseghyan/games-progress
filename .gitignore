@@ -1,5 +1,5 @@
 # Variables d'environnement - SECRETS
-# .env.js est commité car le repo est PRIVÉ
+# config.js est commité car le repo est PRIVÉ
 
 # Logs
 npm-debug.log*
