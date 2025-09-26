@@ -271,134 +271,52 @@ function moveSectionToPosition(categoryId, newIndex) {
     }
 }
 
-// API search function avec RAWG API uniquement - recherche complète
+// API search function avec IGDB API - recherche complète
 async function searchGamesAPI(query) {
     if (query.length < 2) return [];
 
-    const RAWG_API_KEY = '205fa79ede9249dcb2e0cb4eed2f4e55';
-    const allResults = new Set(); // Éviter les doublons
-
     try {
-        // 1. Recherche exacte avec la requête complète
-        const exactUrl = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(query)}&page_size=10&ordering=-rating`;
-        const exactResponse = await fetch(exactUrl);
+        console.log(`🔍 Recherche IGDB pour: "${query}"`);
 
-        if (exactResponse.ok) {
-            const exactData = await exactResponse.json();
-            console.log(`✅ RAWG exact search for "${query}":`, exactData.results.length, 'games');
+        // Utiliser la recherche avancée de l'API IGDB
+        const games = await window.igdbApi.advancedSearch(query);
+        console.log(`✅ IGDB search results:`, games.length, 'games');
 
-            exactData.results.forEach(game => {
-                allResults.add(JSON.stringify({
-                    id: `rawg_${game.id}`,
-                    name: game.name,
-                    year: game.released ? new Date(game.released).getFullYear() : 2024,
-                    platforms: game.platforms ? game.platforms.map(p => p.platform.name).slice(0, 3) : ['PC'],
-                    image: game.background_image || '',
-                    rating: Math.round((game.rating || 0) * 10) / 10,
-                    developer: game.developers && game.developers.length > 0 ? game.developers[0].name : 'Unknown',
-                    genre: game.genres && game.genres.length > 0 ? game.genres[0].name : 'Game'
-                }));
-            });
-        }
+        // Convertir les résultats au format attendu par l'interface
+        const formattedResults = games.map(game => ({
+            id: game.id,
+            name: game.name,
+            year: game.released ? new Date(game.released).getFullYear() : 'TBA',
+            platforms: game.platforms.length > 0 ? game.platforms.slice(0, 3) : ['PC'],
+            image: game.background_image || '',
+            rating: Math.round((game.rating || 0) / 10) / 10, // IGDB rating est sur 100, on la convertit
+            developer: game.developers.length > 0 ? game.developers[0] : 'Unknown',
+            genre: game.genres.length > 0 ? game.genres[0] : 'Game',
+            // Données supplémentaires d'IGDB
+            summary: game.summary,
+            screenshots: game.screenshots || []
+        }));
 
-        // 2. Si recherche de plusieurs mots, essayer avec chaque mot individuellement
-        const queryWords = query.toLowerCase().split(' ').filter(word => word.length > 2);
-
-        if (queryWords.length > 1) {
-            for (const word of queryWords) {
-                const wordUrl = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(word)}&page_size=8&ordering=-rating`;
-
-                try {
-                    const wordResponse = await fetch(wordUrl);
-                    if (wordResponse.ok) {
-                        const wordData = await wordResponse.json();
-                        console.log(`✅ RAWG word search for "${word}":`, wordData.results.length, 'games');
-
-                        // Filtrer pour garder seulement les jeux qui contiennent plusieurs mots de la requête
-                        const relevantGames = wordData.results.filter(game => {
-                            const gameName = game.name.toLowerCase();
-                            const matchedWords = queryWords.filter(queryWord =>
-                                gameName.includes(queryWord)
-                            );
-                            return matchedWords.length >= Math.min(2, queryWords.length);
-                        });
-
-                        relevantGames.forEach(game => {
-                            allResults.add(JSON.stringify({
-                                id: `rawg_${game.id}`,
-                                name: game.name,
-                                year: game.released ? new Date(game.released).getFullYear() : 2024,
-                                platforms: game.platforms ? game.platforms.map(p => p.platform.name).slice(0, 3) : ['PC'],
-                                image: game.background_image || '',
-                                rating: Math.round((game.rating || 0) * 10) / 10,
-                                developer: game.developers && game.developers.length > 0 ? game.developers[0].name : 'Unknown',
-                                genre: game.genres && game.genres.length > 0 ? game.genres[0].name : 'Game'
-                            }));
-                        });
-                    }
-                } catch (wordError) {
-                    console.log(`⚠️ Word search failed for "${word}":`, wordError.message);
-                }
-            }
-        }
-
-        // 3. Recherche plus large si peu de résultats
-        if (allResults.size < 3) {
-            const broadUrl = `https://api.rawg.io/api/games?key=${RAWG_API_KEY}&search=${encodeURIComponent(query)}&page_size=15&ordering=-relevance`;
-            const broadResponse = await fetch(broadUrl);
-
-            if (broadResponse.ok) {
-                const broadData = await broadResponse.json();
-                console.log(`✅ RAWG broad search for "${query}":`, broadData.results.length, 'games');
-
-                broadData.results.forEach(game => {
-                    allResults.add(JSON.stringify({
-                        id: `rawg_${game.id}`,
-                        name: game.name,
-                        year: game.released ? new Date(game.released).getFullYear() : 2024,
-                        platforms: game.platforms ? game.platforms.map(p => p.platform.name).slice(0, 3) : ['PC'],
-                        image: game.background_image || '',
-                        rating: Math.round((game.rating || 0) * 10) / 10,
-                        developer: game.developers && game.developers.length > 0 ? game.developers[0].name : 'Unknown',
-                        genre: game.genres && game.genres.length > 0 ? game.genres[0].name : 'Game'
-                    }));
-                });
-            }
-        }
-
-        // Convertir les résultats et les trier par pertinence
-        const finalResults = Array.from(allResults).map(result => JSON.parse(result));
-
-        // Tri par pertinence : exact match > partial match > rating
-        finalResults.sort((a, b) => {
-            const aExact = a.name.toLowerCase() === query.toLowerCase();
-            const bExact = b.name.toLowerCase() === query.toLowerCase();
-
-            if (aExact && !bExact) return -1;
-            if (!aExact && bExact) return 1;
-
-            const aStartsWith = a.name.toLowerCase().startsWith(query.toLowerCase());
-            const bStartsWith = b.name.toLowerCase().startsWith(query.toLowerCase());
-
-            if (aStartsWith && !bStartsWith) return -1;
-            if (!aStartsWith && bStartsWith) return 1;
-
-            return (b.rating || 0) - (a.rating || 0);
+        // Trier par pertinence (rating et nombre de votes)
+        formattedResults.sort((a, b) => {
+            // Prioriser les jeux avec des ratings élevés et des données complètes
+            const scoreA = (a.rating * 10) + (a.image ? 5 : 0) + (a.developer !== 'Unknown' ? 3 : 0);
+            const scoreB = (b.rating * 10) + (b.image ? 5 : 0) + (b.developer !== 'Unknown' ? 3 : 0);
+            return scoreB - scoreA;
         });
 
-        console.log(`🎯 Total unique results: ${finalResults.length}`);
-        return finalResults.slice(0, 12);
+        return formattedResults.slice(0, 15); // Limiter à 15 résultats
 
     } catch (error) {
-        console.log('❌ RAWG API error:', error.message);
+        console.log('❌ IGDB API error:', error.message);
         return [];
     }
 }
 
-// Cette fonction n'est plus utilisée - tout se fait via RAWG API
+// Cette fonction n'est plus utilisée - tout se fait via IGDB API
 // Conservée pour compatibilité mais vide
 function searchGamesFromDatabase(query, database = []) {
-    console.log('🚫 Local database search disabled - using RAWG API only');
+    console.log('🚫 Local database search disabled - using IGDB API only');
     return [];
 }
 
@@ -478,8 +396,8 @@ function selectGame(gameId) {
             { id: 800, name: 'Minecraft', year: 2011, platforms: ['PC', 'PlayStation', 'Xbox', 'Nintendo Switch'], image: 'https://www.minecraft.net/content/dam/games/minecraft/key-art/Homepage_Discover-Minecraft_940x528.jpg', rating: 4.8, developer: 'Mojang', genre: 'Sandbox' },
             { id: 801, name: 'Fortnite', year: 2017, platforms: ['PC', 'PlayStation', 'Xbox', 'Nintendo Switch'], image: 'https://cdn2.unrealengine.com/fortnite-chapter-4-season-4-keyart-3840x2160-b268a25de7b0.jpg', rating: 4.1, developer: 'Epic Games', genre: 'Battle Royale' },
             { id: 802, name: 'League of Legends', year: 2009, platforms: ['PC'], image: 'https://ddragon.leagueoflegends.com/cdn/img/champion/splash/Ahri_0.jpg', rating: 4.3, developer: 'Riot Games', genre: 'MOBA' },
-            { id: 803, name: 'Rocket League', year: 2015, platforms: ['PC', 'PlayStation', 'Xbox', 'Nintendo Switch'], image: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/252950/header.jpg', rating: 4.4, developer: 'Psyonix', genre: 'Sports' },
-            { id: 804, name: 'Terraria', year: 2011, platforms: ['PC', 'PlayStation', 'Xbox', 'Nintendo Switch'], image: 'https://shared.cloudflare.steamstatic.com/store_item_assets/steam/apps/105600/header.jpg', rating: 4.7, developer: 'Re-Logic', genre: 'Sandbox' },
+            { id: 803, name: 'Rocket League', year: 2015, platforms: ['PC', 'PlayStation', 'Xbox', 'Nintendo Switch'], image: '', rating: 4.4, developer: 'Psyonix', genre: 'Sports' },
+            { id: 804, name: 'Terraria', year: 2011, platforms: ['PC', 'PlayStation', 'Xbox', 'Nintendo Switch'], image: '', rating: 4.7, developer: 'Re-Logic', genre: 'Sandbox' },
             { id: 805, name: 'Roblox', year: 2006, platforms: ['PC', 'Xbox'], image: 'https://tr.rbxcdn.com/5a7ee2ac5dd9a52b1fb6b3c01a6f2e72/768/432/Image/Png', rating: 3.8, developer: 'Roblox Corporation', genre: 'Platform' }
         ];
         const combinedDatabase = [...gamesDatabase, ...additionalGames];
@@ -494,12 +412,17 @@ function selectGame(gameId) {
     selectedGame = {
         id: gameData.id,
         name: gameData.name,
-        image: gameData.image,
+        background_image: gameData.image || gameData.background_image, // Supporter les deux formats
+        image: gameData.image || gameData.background_image,  // Compatibilité
         year: gameData.year,
         rating: gameData.rating,
         platforms: gameData.platforms,
         developer: gameData.developer,
-        genre: gameData.genre
+        developers: gameData.developers,  // Support IGDB
+        genre: gameData.genre,
+        genres: gameData.genres,  // Support IGDB
+        released: gameData.released,  // Pour la date de sortie
+        summary: gameData.summary  // Résumé du jeu
     };
 
     console.log('✅ Jeu sélectionné:', selectedGame);
@@ -636,7 +559,13 @@ function openModal(category) {
     document.getElementById('gameModal').style.display = 'flex';
     document.getElementById('selectedGameInfo').style.display = 'none';
     document.getElementById('saveButton').disabled = true;
+
+    // Réinitialiser les onglets
+    switchTab('search');
+
+    // Nettoyer les champs
     document.getElementById('gameSearch').value = '';
+    clearManualForm();
     hideAutocomplete();
 
     // Setup search functionality
@@ -645,33 +574,120 @@ function openModal(category) {
     document.getElementById('gameSearch').focus();
 }
 
-function closeModal() {
-    document.getElementById('gameModal').style.display = 'none';
+// Fonction pour gérer le basculement entre onglets
+function switchTab(tabName) {
+    // Désactiver tous les onglets
+    const tabs = document.querySelectorAll('.tab-btn');
+    tabs.forEach(tab => tab.classList.remove('active'));
 
-    // Nettoyer TOUS les champs
+    const contents = document.querySelectorAll('.tab-content');
+    contents.forEach(content => content.classList.remove('active'));
+
+    // Activer l'onglet sélectionné
+    document.getElementById(tabName + 'Tab').classList.add('active');
+    document.getElementById(tabName + 'TabContent').classList.add('active');
+
+    // Gérer l'état du bouton de sauvegarde
+    updateSaveButtonState();
+
+    // Focus sur le bon champ
+    if (tabName === 'search') {
+        document.getElementById('gameSearch').focus();
+    } else if (tabName === 'manual') {
+        document.getElementById('gameTitle').focus();
+    }
+}
+
+// Fonction pour nettoyer le formulaire manuel
+function clearManualForm() {
     document.getElementById('gameTitle').value = '';
     document.getElementById('gameSubtitle').value = '';
     document.getElementById('gameImage').value = '';
     document.getElementById('gameLaunchUrl').value = '';
+    document.getElementById('gamePlatform').selectedIndex = 0;
+}
+
+// Fonction pour mettre à jour l'état du bouton de sauvegarde
+function updateSaveButtonState() {
+    const searchTab = document.getElementById('searchTabContent');
+    const manualTab = document.getElementById('manualTabContent');
+    const saveButton = document.getElementById('saveButton');
+
+    if (searchTab.classList.contains('active')) {
+        // Mode recherche : bouton activé seulement si un jeu est sélectionné
+        saveButton.disabled = !selectedGame;
+    } else if (manualTab.classList.contains('active')) {
+        // Mode manuel : bouton activé si le titre est rempli
+        const gameTitle = document.getElementById('gameTitle').value.trim();
+        saveButton.disabled = gameTitle === '';
+    }
+}
+
+// Fonction pour initialiser les event listeners du formulaire manuel
+function setupManualFormListeners() {
+    // Event listener pour le champ titre (requis)
+    const gameTitleInput = document.getElementById('gameTitle');
+    if (gameTitleInput) {
+        gameTitleInput.addEventListener('input', updateSaveButtonState);
+
+        // Génération automatique de l'URL de lancement quand le titre change
+        gameTitleInput.addEventListener('input', debounce(() => {
+            const title = gameTitleInput.value.trim();
+            const platform = document.getElementById('gamePlatform').value;
+            const launchUrlInput = document.getElementById('gameLaunchUrl');
+
+            if (title && !launchUrlInput.value.trim()) {
+                const generatedUrl = generateLaunchUrl(title, platform);
+                if (generatedUrl) {
+                    launchUrlInput.value = generatedUrl;
+                }
+            }
+        }, 500));
+    }
+
+    // Event listener pour le sélecteur de plateforme
+    const platformSelect = document.getElementById('gamePlatform');
+    if (platformSelect) {
+        platformSelect.addEventListener('change', () => {
+            const title = document.getElementById('gameTitle').value.trim();
+            const launchUrlInput = document.getElementById('gameLaunchUrl');
+
+            // Regénérer l'URL si elle était générée automatiquement
+            if (title && (!launchUrlInput.value.trim() || launchUrlInput.dataset.autoGenerated === 'true')) {
+                const generatedUrl = generateLaunchUrl(title, platformSelect.value);
+                launchUrlInput.value = generatedUrl;
+                launchUrlInput.dataset.autoGenerated = generatedUrl ? 'true' : 'false';
+            }
+        });
+    }
+
+    // Event listener pour détecter les modifications manuelles de l'URL
+    const launchUrlInput = document.getElementById('gameLaunchUrl');
+    if (launchUrlInput) {
+        launchUrlInput.addEventListener('input', () => {
+            // Marquer comme non auto-généré si l'utilisateur modifie manuellement
+            launchUrlInput.dataset.autoGenerated = 'false';
+        });
+    }
+}
+
+function closeModal() {
+    document.getElementById('gameModal').style.display = 'none';
+
+    // Nettoyer TOUS les champs
     document.getElementById('gameSearch').value = '';
+    clearManualForm();
 
     // Remettre le titre du modal par défaut
     document.getElementById('modalTitle').textContent = 'Ajouter un jeu';
 
-    // Masquer le formulaire manuel et remettre l'interface normale
-    const manualEditForm = document.getElementById('manualEditForm');
-    if (manualEditForm) {
-        manualEditForm.style.display = 'none';
-    }
+    // Revenir à l'onglet de recherche par défaut
+    switchTab('search');
 
-    const searchSection = document.getElementById('gameSearchSection');
-    if (searchSection) {
-        searchSection.style.display = 'block';
-    }
-
+    // Masquer les infos du jeu sélectionné
     const selectedGameInfo = document.getElementById('selectedGameInfo');
     if (selectedGameInfo) {
-        selectedGameInfo.style.display = 'none'; // Toujours masquer au début
+        selectedGameInfo.style.display = 'none';
     }
 
     // Désactiver le bouton de sauvegarde par défaut

@@ -101,48 +101,67 @@
     <div class="modal" id="gameModal">
         <div class="modal-content">
             <h2 id="modalTitle">Ajouter un nouveau jeu</h2>
-            <div class="search-container">
-                <input type="text" id="gameSearch" placeholder="Rechercher un jeu..." autocomplete="off">
-                <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
-            </div>
-            <div id="selectedGameInfo" style="display: none;">
-                <div style="padding: 15px; background: rgba(102, 192, 244, 0.1); border-radius: 6px; margin: 10px 0;">
-                    <div style="font-weight: 600; color: #66c0f4; margin-bottom: 8px;">🎮 Jeu sélectionné :</div>
-                    <div id="selectedGameDisplay"></div>
-                    <div class="platform-selector" id="platformSelector"></div>
-                </div>
-            </div>
-            <!-- Formulaire manuel pour édition -->
-            <div id="manualEditForm" style="display: none;">
-                <input type="text" id="gameTitle" placeholder="Nom du jeu">
-                <input type="text" id="gameSubtitle" placeholder="Sous-titre / Edition">
-                <input type="url" id="gameImage" placeholder="URL de l'image">
 
-                <div style="margin: 10px 0;">
-                    <label style="display: block; margin-bottom: 5px; color: #c7d5e0; font-weight: 500;">Plateforme :</label>
-                    <select id="gamePlatform" style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #4a5568; background: #2d3748; color: #e2e8f0;">
-                        <option value="Steam">🟦 Steam</option>
-                        <option value="Epic Games">⚫ Epic Games</option>
-                        <option value="GOG">🟣 GOG</option>
-                        <option value="Battle.net">🔵 Battle.net</option>
-                        <option value="Ubisoft Connect">🔶 Ubisoft Connect</option>
-                        <option value="Origin/EA">🟠 Origin/EA</option>
-                        <option value="PC Standalone">💻 Exécutable</option>
-                    </select>
-                </div>
+            <!-- Onglets de navigation -->
+            <div class="modal-tabs">
+                <button class="tab-btn active" onclick="switchTab('search')" id="searchTab">🔍 Rechercher</button>
+                <button class="tab-btn" onclick="switchTab('manual')" id="manualTab">✏️ Ajouter Manuellement</button>
+            </div>
 
-                <input type="url" id="gameLaunchUrl" placeholder="URL de lancement (généré automatiquement)">
-                <div style="font-size: 0.8rem; color: #a0aec0; margin-top: 5px;">
-                    💡 L'URL de lancement est générée automatiquement selon la plateforme
+            <!-- Contenu onglet Recherche -->
+            <div id="searchTabContent" class="tab-content active">
+                <div class="search-container">
+                    <input type="text" id="gameSearch" placeholder="Rechercher un jeu..." autocomplete="off">
+                    <div class="autocomplete-dropdown" id="autocompleteDropdown"></div>
+                </div>
+                <div id="selectedGameInfo" style="display: none;">
+                    <div style="padding: 15px; background: rgba(102, 192, 244, 0.1); border-radius: 6px; margin: 10px 0;">
+                        <div style="font-weight: 600; color: #66c0f4; margin-bottom: 8px;">🎮 Jeu sélectionné :</div>
+                        <div id="selectedGameDisplay"></div>
+                        <div class="platform-selector" id="platformSelector"></div>
+                    </div>
+                </div>
+                <div id="gameInfo" style="font-size: 0.9rem; color: #8f98a0; margin: 5px 0; line-height: 1.4;">
+                    💡 <strong>Recherchez votre jeu</strong> et sélectionnez votre plateforme !<br><br>
+                    🎮 <strong>Plateformes supportées :</strong><br>
+                    • <strong>Steam, Epic, PlayStation, Xbox, Nintendo Switch</strong><br>
+                    • <strong>URLs générées automatiquement</strong> selon la plateforme<br><br>
+                    ✨ <strong>Toutes les infos sont remplies automatiquement !</strong>
                 </div>
             </div>
-            <div id="gameInfo" style="font-size: 0.9rem; color: #8f98a0; margin: 5px 0; line-height: 1.4; display: none;">
-                💡 <strong>Recherchez votre jeu</strong> et sélectionnez votre plateforme !<br><br>
-                🎮 <strong>Plateformes supportées :</strong><br>
-                • <strong>Steam, Epic, PlayStation, Xbox, Nintendo Switch</strong><br>
-                • <strong>URLs générées automatiquement</strong> selon la plateforme<br><br>
-                ✨ <strong>Toutes les infos sont remplies automatiquement !</strong>
+
+            <!-- Contenu onglet Ajout Manuel -->
+            <div id="manualTabContent" class="tab-content">
+                <div class="manual-form">
+                    <input type="text" id="gameTitle" placeholder="Nom du jeu *" required>
+                    <input type="text" id="gameSubtitle" placeholder="Sous-titre / Edition (optionnel)">
+                    <input type="url" id="gameImage" placeholder="URL de l'image (optionnelle)">
+
+                    <div style="margin: 15px 0;">
+                        <label style="display: block; margin-bottom: 8px; color: #c7d5e0; font-weight: 500;">Plateforme :</label>
+                        <select id="gamePlatform" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #4a5568; background: #2d3748; color: #e2e8f0;">
+                            <option value="Steam">🟦 Steam</option>
+                            <option value="Epic Games">⚫ Epic Games</option>
+                            <option value="GOG">🟣 GOG</option>
+                            <option value="Battle.net">🔵 Battle.net</option>
+                            <option value="Ubisoft Connect">🔶 Ubisoft Connect</option>
+                            <option value="Origin/EA">🟠 Origin/EA</option>
+                            <option value="PC Standalone">💻 Exécutable</option>
+                            <option value="PlayStation">🎮 PlayStation</option>
+                            <option value="Xbox">🎯 Xbox</option>
+                            <option value="Nintendo Switch">🕹️ Nintendo Switch</option>
+                            <option value="Autre">❓ Autre</option>
+                        </select>
+                    </div>
+
+                    <input type="url" id="gameLaunchUrl" placeholder="URL de lancement (optionnelle)">
+                    <div style="font-size: 0.85rem; color: #a0aec0; margin-top: 8px; line-height: 1.4;">
+                        💡 <strong>Conseil :</strong> Pour Steam, Epic, etc., l'URL de lancement peut être générée automatiquement selon la plateforme.<br>
+                        🌟 Seul le nom du jeu est obligatoire, les autres champs sont optionnels.
+                    </div>
+                </div>
             </div>
+
             <div class="modal-buttons">
                 <button class="save-btn" onclick="saveGame()" id="saveButton" disabled>Sauvegarder</button>
                 <button class="cancel-btn" onclick="closeModal()">Annuler</button>
@@ -160,6 +179,7 @@
     <!-- JavaScript Files -->
     <script src="js/data.js"></script>
     <script src="js/firebase-config.js"></script>
+    <script src="js/igdb-api-simple.js"></script>
     <script src="js/game-manager.js"></script>
     <script src="js/ui-manager.js"></script>
     <script src="js/main.js"></script>

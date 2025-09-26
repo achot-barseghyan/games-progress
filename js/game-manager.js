@@ -124,43 +124,13 @@ async function loadData() {
 }
 
 // Fonction pour rechercher automatiquement une image basée sur le titre
+// DÉSACTIVÉE : maintenant toutes les images viennent de l'API IGDB
 function findGameImage(title) {
     if (!title) return '';
 
-    // Normaliser le titre pour la recherche (minuscules, suppression caractères spéciaux)
-    const normalizedTitle = title.toLowerCase()
-        .replace(/[®™©]/g, '') // Supprimer les marques commerciales
-        .replace(/:\s*/, ' ') // Remplacer : par espace
-        .replace(/\s+/g, ' ') // Remplacer espaces multiples par un seul
-        .trim();
-
-    // Recherche directe
-    if (gameImages[normalizedTitle]) {
-        return gameImages[normalizedTitle];
-    }
-
-    // Recherche partielle - chercher si le titre contient un des jeux de la base
-    for (const [gameName, imageUrl] of Object.entries(gameImages)) {
-        if (normalizedTitle.includes(gameName) || gameName.includes(normalizedTitle)) {
-            return imageUrl;
-        }
-    }
-
-    // Recherche par mots-clés
-    const keywords = normalizedTitle.split(' ');
-    for (const [gameName, imageUrl] of Object.entries(gameImages)) {
-        const gameWords = gameName.split(' ');
-        const matchCount = keywords.filter(keyword =>
-            gameWords.some(gameWord => gameWord.includes(keyword) || keyword.includes(gameWord))
-        ).length;
-
-        // Si au moins 60% des mots correspondent
-        if (matchCount >= Math.ceil(keywords.length * 0.6) && matchCount >= 1) {
-            return imageUrl;
-        }
-    }
-
-    return ''; // Aucune image trouvée
+    console.log('⚠️ findGameImage appelée mais désactivée - utiliser l\'API IGDB');
+    // Retourner vide pour forcer l'utilisation des images IGDB uniquement
+    return '';
 }
 
 // Fonction pour mettre à jour automatiquement l'image quand le titre change
@@ -405,21 +375,74 @@ function deleteGame(gameId) {
 
 // Fonction pour sauvegarder un jeu
 function saveGame() {
-    const title = document.getElementById('gameTitle').value.trim();
-    const subtitle = document.getElementById('gameSubtitle').value.trim();
-    let image = document.getElementById('gameImage').value.trim();
-    const launchUrl = document.getElementById('gameLaunchUrl').value.trim();
+    const isManualMode = document.getElementById('manualTabContent').classList.contains('active');
+    let title, subtitle, image, launchUrl, platform;
 
-    // En mode édition, utiliser le sélecteur du formulaire
-    // En mode ajout, utiliser la plateforme sélectionnée depuis l'autocomplétion
-    const platform = editingGame
-        ? (document.getElementById('gamePlatform')?.value || 'Steam')
-        : (selectedPlatform || 'Steam');
+    if (isManualMode) {
+        // Mode manuel : récupérer les données du formulaire
+        title = document.getElementById('gameTitle').value.trim();
+        subtitle = document.getElementById('gameSubtitle').value.trim();
+        image = document.getElementById('gameImage').value.trim();
+        launchUrl = document.getElementById('gameLaunchUrl').value.trim();
+        platform = document.getElementById('gamePlatform').value || 'Steam';
 
-    // Si aucune image n'est fournie, essayer de la trouver automatiquement
-    if (!image && title) {
-        image = findGameImage(title);
+        // Générer automatiquement l'URL de lancement si pas fournie
+        if (!launchUrl && title) {
+            launchUrl = generateLaunchUrl(title, platform);
+        }
+    } else {
+        // Mode recherche : utiliser les données du jeu sélectionné
+        if (!selectedGame) return;
+
+        title = selectedGame.name;
+
+        // Générer un subtitle plus informatif
+        let subtitleParts = [];
+
+        // Ajouter l'année de sortie
+        if (selectedGame.released) {
+            try {
+                const year = new Date(selectedGame.released).getFullYear();
+                if (year && !isNaN(year)) {
+                    subtitleParts.push(`Sorti en ${year}`);
+                }
+            } catch (e) {
+                console.warn('Erreur parsing date:', selectedGame.released);
+            }
+        }
+
+        // Ajouter le développeur
+        if (selectedGame.developers && selectedGame.developers.length > 0) {
+            subtitleParts.push(`par ${selectedGame.developers[0]}`);
+        } else if (selectedGame.developer && selectedGame.developer !== 'Unknown') {
+            subtitleParts.push(`par ${selectedGame.developer}`);
+        }
+
+        // Ajouter le genre principal
+        if (selectedGame.genres && selectedGame.genres.length > 0) {
+            subtitleParts.push(selectedGame.genres[0]);
+        } else if (selectedGame.genre && selectedGame.genre !== 'Game') {
+            subtitleParts.push(selectedGame.genre);
+        }
+
+        subtitle = subtitleParts.length > 0 ? subtitleParts.join(' • ') : 'Jeu vidéo';
+
+        image = selectedGame.background_image || selectedGame.image || '';
+        platform = selectedPlatform || 'Steam';
+        launchUrl = generateLaunchUrl(title, platform);
+
+        console.log('🔍 Mode recherche - Données du jeu sélectionné:', {
+            title,
+            subtitle,
+            image,
+            platform,
+            selectedGame: selectedGame
+        });
     }
+
+    // Ne plus utiliser findGameImage car nous utilisons maintenant l'API IGDB
+    // L'image devrait déjà être fournie par IGDB ou par l'ajout manuel
+    console.log(`💾 Sauvegarde du jeu "${title}" avec image:`, image || 'Aucune image');
 
     if (title) {
         if (editingGame) {
@@ -445,12 +468,38 @@ function saveGame() {
                 platform: platform || 'Steam'
             };
 
+            console.log('💾 Nouveau jeu créé:', newGame);
+            console.log('🖼️ Image dans le nouveau jeu:', newGame.image);
+
             games[currentCategory].push(newGame);
             renderCategory(currentCategory);
             saveData();
         }
 
         closeModal();
+    }
+}
+
+// Fonction pour générer automatiquement l'URL de lancement
+function generateLaunchUrl(title, platform) {
+    const cleanTitle = title.toLowerCase().replace(/[^a-z0-9\s]/g, '').replace(/\s+/g, ' ').trim();
+
+    switch (platform) {
+        case 'Steam':
+            const appId = getSteamAppId(cleanTitle);
+            return appId ? `steam://run/${appId}` : '';
+        case 'Epic Games':
+            return `com.epicgames.launcher://apps/${cleanTitle.replace(/\s/g, '')}?action=launch&silent=true`;
+        case 'GOG':
+            return `goggalaxy://openGameView/${cleanTitle.replace(/\s/g, '')}`;
+        case 'Battle.net':
+            return `battlenet://${cleanTitle.replace(/\s/g, '')}`;
+        case 'Ubisoft Connect':
+            return `uplay://launch/${cleanTitle.replace(/\s/g, '')}`;
+        case 'Origin/EA':
+            return `origin2://game/launch/?offerIds=${cleanTitle.replace(/\s/g, '')}`;
+        default:
+            return '';
     }
 }
 

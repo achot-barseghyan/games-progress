@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API IGDB</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #171a21, #1b2838);
+            color: #c7d5e0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(42, 71, 94, 0.3);
+            padding: 30px;
+            border-radius: 10px;
+            border: 1px solid rgba(102, 192, 244, 0.2);
+        }
+
+        h1 {
+            color: #66c0f4;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .test-section {
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(23, 26, 33, 0.5);
+            border-radius: 8px;
+            border: 1px solid rgba(102, 192, 244, 0.1);
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border: 1px solid rgba(102, 192, 244, 0.3);
+            border-radius: 6px;
+            background: rgba(23, 26, 33, 0.8);
+            color: #c7d5e0;
+            font-size: 16px;
+        }
+
+        button {
+            background: linear-gradient(90deg, #4c6b22, #6ca24c);
+            color: #c7d5e0;
+            border: 1px solid rgba(102, 192, 244, 0.3);
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+
+        button:hover {
+            background: linear-gradient(90deg, #5c7b32, #7cb25c);
+        }
+
+        .results {
+            margin-top: 20px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .game-item {
+            background: rgba(42, 71, 94, 0.2);
+            margin: 10px 0;
+            padding: 15px;
+            border-radius: 6px;
+            border-left: 3px solid #66c0f4;
+        }
+
+        .game-name {
+            font-weight: bold;
+            color: #66c0f4;
+            font-size: 18px;
+        }
+
+        .game-info {
+            color: #a0aec0;
+            margin: 5px 0;
+        }
+
+        .console {
+            background: #000;
+            color: #0f0;
+            padding: 15px;
+            border-radius: 6px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎮 Test API IGDB - API Réelle</h1>
+
+        <div class="test-section">
+            <h3>🔍 Test de Recherche</h3>
+            <input type="text" id="searchInput" placeholder="Tapez un nom de jeu (ex: Dark Souls, Elden Ring, Cyberpunk)" />
+            <button onclick="testSearch()">Rechercher</button>
+            <button onclick="testAdvancedSearch()">Recherche Avancée</button>
+            <button onclick="clearResults()">Effacer</button>
+
+            <div id="results" class="results"></div>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Tests Prédéfinis</h3>
+            <button onclick="runTest('Dark Souls')">Test: Dark Souls</button>
+            <button onclick="runTest('souls')">Test: souls (genre)</button>
+            <button onclick="runTest('Elden')">Test: Elden</button>
+            <button onclick="runTest('action')">Test: action (genre)</button>
+            <button onclick="runTest('FromSoftware')">Test: FromSoftware</button>
+        </div>
+
+        <div class="console" id="console"></div>
+    </div>
+
+    <!-- Configuration et Scripts -->
+    <script>
+        // Configuration IGDB
+        window.IGDB_CONFIG = {
+            clientId: "oo9trdrr4motha9eni494y49jg7sv1",
+            secret: "rywex3t38h91ckzceqp52fexf0blfu"
+        };
+    </script>
+    <script src="js/igdb-api-simple.js"></script>
+
+    <script>
+        function log(message) {
+            const console = document.getElementById('console');
+            console.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${message}</div>`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function displayResults(games, title = 'Résultats') {
+            const resultsDiv = document.getElementById('results');
+
+            if (games.length === 0) {
+                resultsDiv.innerHTML = `<div class="game-item">Aucun jeu trouvé</div>`;
+                return;
+            }
+
+            let html = `<h4>${title} (${games.length} jeux trouvés):</h4>`;
+            games.forEach(game => {
+                html += `
+                    <div class="game-item">
+                        <div class="game-name">${game.name}</div>
+                        <div class="game-info">📅 ${game.released ? new Date(game.released).getFullYear() : 'TBA'} | ⭐ ${game.rating}/100 | 🎮 ${game.platforms.join(', ')}</div>
+                        <div class="game-info">🎭 ${game.genres.join(', ')} | 🏢 ${game.developers.join(', ')}</div>
+                        ${game.summary ? `<div class="game-info">📝 ${game.summary.substring(0, 150)}...</div>` : ''}
+                    </div>
+                `;
+            });
+            resultsDiv.innerHTML = html;
+        }
+
+        async function testSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                alert('Veuillez entrer un terme de recherche');
+                return;
+            }
+
+            log(`🔍 Recherche simple: "${query}"`);
+            try {
+                const results = await window.igdbApi.searchGames(query, 10);
+                log(`✅ ${results.length} résultats trouvés`);
+                displayResults(results, `Recherche simple: "${query}"`);
+            } catch (error) {
+                log(`❌ Erreur: ${error.message}`);
+            }
+        }
+
+        async function testAdvancedSearch() {
+            const query = document.getElementById('searchInput').value.trim();
+            if (!query) {
+                alert('Veuillez entrer un terme de recherche');
+                return;
+            }
+
+            log(`🎯 Recherche avancée: "${query}"`);
+            try {
+                const results = await window.igdbApi.advancedSearch(query);
+                log(`✅ ${results.length} résultats trouvés (recherche avancée)`);
+                displayResults(results, `Recherche avancée: "${query}"`);
+            } catch (error) {
+                log(`❌ Erreur: ${error.message}`);
+            }
+        }
+
+        async function runTest(query) {
+            document.getElementById('searchInput').value = query;
+            log(`🧪 Test automatique: "${query}"`);
+            await testAdvancedSearch();
+        }
+
+        function clearResults() {
+            document.getElementById('results').innerHTML = '';
+            document.getElementById('console').innerHTML = '';
+            log('Console et résultats effacés');
+        }
+
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', function() {
+            log('🚀 Test IGDB API réelle initialisé');
+            log(`🔑 Client ID: ${window.IGDB_CONFIG.clientId}`);
+            log('⚠️ Premier test peut prendre quelques secondes pour obtenir le token...');
+
+            // Test au chargement
+            setTimeout(() => {
+                log('🧪 Lancement du test automatique...');
+                runTest('Dark Souls');
+            }, 2000);
+        });
+
+        // Permettre la recherche avec Enter
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                testAdvancedSearch();
+            }
+        });
+    </script>
+</body>
+</html>

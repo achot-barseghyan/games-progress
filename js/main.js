@@ -260,6 +260,9 @@ document.addEventListener('DOMContentLoaded', async function () {
     applyViewMode();
     updateViewToggleButton();
 
+    // Initialiser les event listeners pour le formulaire manuel
+    setupManualFormListeners();
+
     console.log('✅ Application initialisée avec succès');
 });
 

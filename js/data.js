@@ -1,3 +1,8 @@
+// ⚠️ FICHIER OBSOLÈTE - N'EST PLUS UTILISÉ AVEC L'API IGDB
+// Les données ci-dessous étaient utilisées avant l'intégration de l'API IGDB
+// Maintenant tous les jeux et images proviennent directement de IGDB
+// Ce fichier est conservé uniquement pour compatibilité legacy
+
 // Données initiales des jeux souls-like populaires
 const defaultGames = {
     'not-played': [
