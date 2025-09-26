@@ -3,8 +3,8 @@
 
 class IGDBApiSimple {
     constructor() {
-        this.clientId = window.IGDB_CONFIG.clientId;
-        this.clientSecret = window.IGDB_CONFIG.secret;
+        this.clientId = null;
+        this.clientSecret = null;
         this.accessToken = null;
         this.tokenExpiry = null;
 
@@ -14,8 +14,24 @@ class IGDBApiSimple {
         this.tokenUrl = 'https://id.twitch.tv/oauth2/token';
     }
 
+    // Initialiser les credentials de manière lazy
+    initializeCredentials() {
+        if (!this.clientId && window.IGDB_CONFIG) {
+            this.clientId = window.IGDB_CONFIG.clientId;
+            this.clientSecret = window.IGDB_CONFIG.secret;
+            console.log('🔑 IGDB credentials initialized');
+        }
+
+        if (!this.clientId) {
+            throw new Error('IGDB credentials not available. Make sure config.js is loaded.');
+        }
+    }
+
     // Obtenir un token d'accès Twitch
     async getAccessToken() {
+        // Initialiser les credentials si pas encore fait
+        this.initializeCredentials();
+
         if (this.accessToken && this.tokenExpiry && Date.now() < this.tokenExpiry) {
             return this.accessToken;
         }
@@ -176,6 +192,9 @@ class IGDBApiSimple {
     async searchGames(query, limit = 50) {
         if (!query || query.length < 2) return [];
 
+        // Initialiser les credentials avant toute opération
+        this.initializeCredentials();
+
         const searchBody = `
             fields name, summary, cover.image_id, first_release_date, platforms.name,
                    rating, rating_count, genres.name, involved_companies.company.name,
@@ -234,6 +253,9 @@ class IGDBApiSimple {
     // Recherche avancée
     async advancedSearch(query) {
         try {
+            // Initialiser les credentials avant toute opération
+            this.initializeCredentials();
+
             console.log(`🎯 Recherche avancée: "${query}"`);
             const results = await this.searchGames(query, 15);
 

@@ -28,10 +28,10 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Create Firebase config
+    - name: Create config file
       run: |
         cat > config.js << 'EOF'
-        // Configuration Firebase générée automatiquement par GitHub Actions
+        // Configuration générée automatiquement par GitHub Actions
         window.FIREBASE_CONFIG = {
           apiKey: "${{ secrets.FIREBASE_API_KEY }}",
           authDomain: "${{ secrets.FIREBASE_AUTH_DOMAIN }}",
@@ -42,9 +42,15 @@ jobs:
           measurementId: "${{ secrets.FIREBASE_MEASUREMENT_ID }}"
         };
 
+        window.IGDB_CONFIG = {
+          clientId: "${{ secrets.IGDB_CLIENT_ID }}",
+          secret: "${{ secrets.IGDB_CLIENT_SECRET }}"
+        };
+
         window.FIREBASE_ENABLED = true;
 
         console.log("🔥 Firebase config loaded from GitHub Secrets");
+        console.log("🎮 IGDB config loaded from GitHub Secrets");
         EOF
 
     - name: Setup Pages
