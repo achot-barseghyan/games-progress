@@ -263,6 +263,22 @@ document.addEventListener('DOMContentLoaded', async function () {
     // Initialiser les event listeners pour le formulaire manuel
     setupManualFormListeners();
 
+    // Initialiser la configuration Steam
+    updateSteamConfigButton();
+
+    // Auto-update des heures de jeu si configuré
+    if (window.steamAPI.isConfigured() && localStorage.getItem('autoUpdatePlaytime') !== 'false') {
+        console.log('🔄 Mise à jour automatique des heures de jeu Steam...');
+        try {
+            await window.steamAPI.updateAllGamesPlaytime(games);
+            renderAllGames();
+            saveData();
+            console.log('✅ Heures de jeu mises à jour automatiquement');
+        } catch (error) {
+            console.warn('⚠️ Erreur lors de la mise à jour automatique des heures de jeu:', error.message);
+        }
+    }
+
     console.log('✅ Application initialisée avec succès');
 });
 

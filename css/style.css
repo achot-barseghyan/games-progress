@@ -812,6 +812,27 @@ body[data-theme="sekiro"] .theme-dropdown option:checked {
     transition: all 0.3s ease;
 }
 
+.steam-config-btn {
+    background: #6c757d;
+    border: 1px solid rgba(102, 192, 244, 0.3);
+    border-radius: 6px;
+    padding: 8px 16px;
+    color: white;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.3s ease;
+    font-weight: 500;
+}
+
+.steam-config-btn:hover {
+    background: #5a6268;
+    border-color: rgba(102, 192, 244, 0.6);
+    transform: scale(1.02);
+}
+
 .action-btn:hover {
     background: rgba(42, 71, 94, 0.9);
     border-color: rgba(102, 192, 244, 0.6);

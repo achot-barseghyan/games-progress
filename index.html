@@ -13,7 +13,11 @@
         <h1>🎮 Souls-like Game Tracker</h1>
 
         <div class="toolbar">
-            <div class="toolbar-left"></div>
+            <div class="toolbar-left">
+                <button class="steam-config-btn" id="steamConfigBtn" onclick="openSteamConfig()" title="Configurer Steam ID">
+                    🔧 Steam
+                </button>
+            </div>
             <div class="toolbar-center">
                 <button class="lock-toggle-btn" id="lockToggleBtn" onclick="toggleSectionLock()">
                     <span class="lock-icon">🔓</span>
@@ -169,6 +173,53 @@
         </div>
     </div>
 
+    <!-- Modal pour configuration Steam -->
+    <div class="modal" id="steamConfigModal">
+        <div class="modal-content">
+            <h2>🎮 Configuration Steam</h2>
+            <p style="color: #8f98a0; margin-bottom: 20px;">
+                Configurez votre Steam ID pour récupérer automatiquement vos heures de jeu.
+            </p>
+
+            <div class="steam-config-form">
+                <label for="steamIdInput" style="display: block; margin-bottom: 8px; color: #c7d5e0; font-weight: 500;">
+                    Steam ID (format 64-bit) :
+                </label>
+                <input type="text" id="steamIdInput" placeholder="76561198XXXXXXXXX"
+                       style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #4a5568; background: #2d3748; color: #e2e8f0; margin-bottom: 10px;">
+
+                <div style="font-size: 0.85em; color: #8f98a0; margin-bottom: 15px;">
+                    💡 <strong>Comment trouver votre Steam ID :</strong><br>
+                    1. Allez sur <a href="https://steamidfinder.com" target="_blank" style="color: #66c0f4;">steamidfinder.com</a><br>
+                    2. Entrez votre nom d'utilisateur Steam ou URL de profil<br>
+                    3. Copiez le "Steam64 (Dec)" qui commence par 76561...<br><br>
+
+                    ⚠️ <strong>Problème CORS ?</strong><br>
+                    Si le test échoue, activez temporairement :<br>
+                    👉 <a href="https://cors-anywhere.herokuapp.com/corsdemo" target="_blank" style="color: #ffc107;">CORS Anywhere Demo</a>
+                </div>
+
+                <div id="steamIdStatus" style="margin-bottom: 15px; padding: 8px; border-radius: 4px; display: none;">
+                    <!-- Status message will be displayed here -->
+                </div>
+
+                <div style="margin-bottom: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; color: #c7d5e0;">
+                        <input type="checkbox" id="autoUpdatePlaytime" checked>
+                        <span>Mettre à jour automatiquement les heures de jeu au chargement</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="save-btn" onclick="saveSteamConfig()">Sauvegarder</button>
+                <button class="action-btn" onclick="testSteamConnection()" style="background: #28a745;">🧪 Tester</button>
+                <button class="action-btn" onclick="updateAllPlaytimes()" style="background: #17a2b8;">🔄 Mettre à jour</button>
+                <button class="cancel-btn" onclick="closeSteamConfig()">Fermer</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
@@ -180,6 +231,7 @@
     <script src="js/data.js"></script>
     <script src="js/firebase-config.js"></script>
     <script src="js/igdb-api-simple.js"></script>
+    <script src="js/steam-api.js"></script>
     <script src="js/game-manager.js"></script>
     <script src="js/ui-manager.js"></script>
     <script src="js/main.js"></script>

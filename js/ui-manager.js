@@ -76,6 +76,172 @@ function updateViewToggleButton() {
     }
 }
 
+// Fonctions de gestion de la configuration Steam
+function openSteamConfig() {
+    const modal = document.getElementById('steamConfigModal');
+    const steamIdInput = document.getElementById('steamIdInput');
+    const autoUpdateCheckbox = document.getElementById('autoUpdatePlaytime');
+
+    // Pré-remplir avec les valeurs existantes
+    steamIdInput.value = window.steamAPI.getSteamUserId() || '';
+    autoUpdateCheckbox.checked = localStorage.getItem('autoUpdatePlaytime') !== 'false';
+
+    // Mettre à jour le statut du bouton Steam dans la toolbar
+    updateSteamConfigButton();
+
+    modal.style.display = 'flex';
+    steamIdInput.focus();
+}
+
+function closeSteamConfig() {
+    const modal = document.getElementById('steamConfigModal');
+    modal.style.display = 'none';
+
+    // Nettoyer le message de statut
+    const statusDiv = document.getElementById('steamIdStatus');
+    statusDiv.style.display = 'none';
+}
+
+function saveSteamConfig() {
+    const steamIdInput = document.getElementById('steamIdInput');
+    const autoUpdateCheckbox = document.getElementById('autoUpdatePlaytime');
+    const statusDiv = document.getElementById('steamIdStatus');
+
+    const steamId = steamIdInput.value.trim();
+
+    // Valider le Steam ID
+    if (steamId && !SteamAPI.isValidSteamId(steamId)) {
+        showSteamStatus('❌ Steam ID invalide. Doit être au format 64-bit (17 chiffres commençant par 76561)', 'error');
+        return;
+    }
+
+    // Sauvegarder la configuration
+    if (steamId) {
+        window.steamAPI.setSteamUserId(steamId);
+        showSteamStatus('✅ Steam ID sauvegardé avec succès', 'success');
+    } else {
+        window.steamAPI.setSteamUserId(null);
+        localStorage.removeItem('steamUserId');
+        showSteamStatus('🗑️ Configuration Steam supprimée', 'info');
+    }
+
+    // Sauvegarder les préférences
+    localStorage.setItem('autoUpdatePlaytime', autoUpdateCheckbox.checked);
+
+    // Mettre à jour le bouton dans la toolbar
+    updateSteamConfigButton();
+
+    console.log('💾 Configuration Steam sauvegardée:', {
+        steamId: steamId || 'non configuré',
+        autoUpdate: autoUpdateCheckbox.checked
+    });
+}
+
+async function testSteamConnection() {
+    const statusDiv = document.getElementById('steamIdStatus');
+
+    if (!window.steamAPI.isConfigured()) {
+        showSteamStatus('⚠️ Veuillez d\'abord configurer votre Steam ID', 'warning');
+        return;
+    }
+
+    showSteamStatus('🔄 Test de connexion en cours...', 'info');
+
+    try {
+        const games = await window.steamAPI.getOwnedGames();
+        if (games.length > 0) {
+            showSteamStatus(`✅ Connexion réussie ! ${games.length} jeux trouvés dans votre bibliothèque Steam`, 'success');
+        } else {
+            showSteamStatus('⚠️ Connexion établie mais aucun jeu trouvé (profil privé ?)', 'warning');
+        }
+    } catch (error) {
+        let errorMessage = `❌ Erreur de connexion: ${error.message}`;
+
+        // Si c'est un problème de CORS, proposer des solutions
+        if (error.message.includes('CORS') || error.message.includes('proxy') || error.message.includes('403')) {
+            errorMessage += '\n\n💡 Solutions possibles:\n';
+            errorMessage += '1. Activez CORS Anywhere: https://cors-anywhere.herokuapp.com/corsdemo\n';
+            errorMessage += '2. Installez une extension CORS pour Chrome/Firefox\n';
+            errorMessage += '3. Utilisez un serveur proxy local';
+        }
+
+        showSteamStatus(errorMessage, 'error');
+        console.error('Erreur test Steam:', error);
+    }
+}
+
+async function updateAllPlaytimes() {
+    const statusDiv = document.getElementById('steamIdStatus');
+
+    if (!window.steamAPI.isConfigured()) {
+        showSteamStatus('⚠️ Veuillez d\'abord configurer votre Steam ID', 'warning');
+        return;
+    }
+
+    showSteamStatus('🔄 Mise à jour des heures de jeu en cours...', 'info');
+
+    try {
+        await window.steamAPI.updateAllGamesPlaytime(games);
+        renderAllGames();
+        saveData();
+        showSteamStatus('✅ Heures de jeu mises à jour avec succès !', 'success');
+    } catch (error) {
+        showSteamStatus(`❌ Erreur lors de la mise à jour: ${error.message}`, 'error');
+        console.error('Erreur mise à jour heures:', error);
+    }
+}
+
+function showSteamStatus(message, type) {
+    const statusDiv = document.getElementById('steamIdStatus');
+
+    statusDiv.textContent = message;
+    statusDiv.style.display = 'block';
+
+    // Couleurs selon le type
+    switch (type) {
+        case 'success':
+            statusDiv.style.background = 'rgba(40, 167, 69, 0.2)';
+            statusDiv.style.border = '1px solid #28a745';
+            statusDiv.style.color = '#28a745';
+            break;
+        case 'error':
+            statusDiv.style.background = 'rgba(220, 53, 69, 0.2)';
+            statusDiv.style.border = '1px solid #dc3545';
+            statusDiv.style.color = '#dc3545';
+            break;
+        case 'warning':
+            statusDiv.style.background = 'rgba(255, 193, 7, 0.2)';
+            statusDiv.style.border = '1px solid #ffc107';
+            statusDiv.style.color = '#ffc107';
+            break;
+        case 'info':
+        default:
+            statusDiv.style.background = 'rgba(102, 192, 244, 0.2)';
+            statusDiv.style.border = '1px solid #66c0f4';
+            statusDiv.style.color = '#66c0f4';
+            break;
+    }
+}
+
+function updateSteamConfigButton() {
+    const button = document.getElementById('steamConfigBtn');
+    if (!button) return;
+
+    const isConfigured = window.steamAPI.isConfigured();
+
+    if (isConfigured) {
+        button.style.background = '#28a745';
+        button.style.color = 'white';
+        button.title = 'Steam configuré - Cliquer pour modifier';
+        button.innerHTML = '✅ Steam';
+    } else {
+        button.style.background = '#6c757d';
+        button.style.color = 'white';
+        button.title = 'Configurer Steam ID pour récupérer les heures de jeu';
+        button.innerHTML = '🔧 Steam';
+    }
+}
+
 // Fonction pour basculer la minimisation d'une section
 function toggleMinimize(categoryId) {
     const section = document.querySelector(`[data-category="${categoryId}"]`);
@@ -188,6 +354,9 @@ function createGameCard(game) {
     // Créer l'élément image avec gestion d'erreur avancée
     const imageElement = createImageElement(game);
 
+    // Créer l'élément des heures de jeu Steam si disponible
+    const playtimeElement = createPlaytimeElement(game);
+
     // Structure différente pour vue compacte vs normale
     if (isCompactView) {
         card.innerHTML = `
@@ -195,6 +364,7 @@ function createGameCard(game) {
             <div class="game-info">
                 <div class="game-title">${game.title}</div>
                 <div class="game-subtitle">${game.subtitle}</div>
+                ${playtimeElement}
             </div>
             <div class="game-card-actions">
                 <button class="action-btn edit-btn" onclick="editGame(${game.id})" title="Modifier">✏️</button>
@@ -211,6 +381,7 @@ function createGameCard(game) {
             ${imageElement}
             <div class="game-title">${game.title}</div>
             <div class="game-subtitle">${game.subtitle}</div>
+            ${playtimeElement}
             ${game.launchUrl ? `<button class="play-btn" onclick="launchGame('${game.launchUrl}')" title="Lancer le jeu">▶ Play</button>` : ''}
         `;
     }
@@ -246,6 +417,55 @@ function createImageElement(game) {
             <div>${game.title}</div>
         </div>
     `;
+}
+
+// Fonction pour créer l'élément d'affichage des heures de jeu
+function createPlaytimeElement(game) {
+    // Vérifier si le jeu a des données Steam de temps de jeu
+    if (game.steamPlaytime !== undefined && game.steamPlaytime !== null) {
+        const playtime = game.steamPlaytime;
+        const playtimeFormatted = formatPlaytime(playtime);
+        const playtimeColor = getPlaytimeColor(playtime);
+
+        // Informations supplémentaires
+        let additionalInfo = '';
+        if (game.steamPlaytime2Weeks && game.steamPlaytime2Weeks > 0) {
+            additionalInfo += ` • ${formatPlaytime(game.steamPlaytime2Weeks)} ces 2 semaines`;
+        }
+
+        if (game.steamLastPlayed) {
+            const lastPlayed = new Date(game.steamLastPlayed);
+            const now = new Date();
+            const daysDiff = Math.floor((now - lastPlayed) / (1000 * 60 * 60 * 24));
+
+            if (daysDiff === 0) {
+                additionalInfo += ' • Joué aujourd\'hui';
+            } else if (daysDiff === 1) {
+                additionalInfo += ' • Joué hier';
+            } else if (daysDiff < 30) {
+                additionalInfo += ` • Joué il y a ${daysDiff} jours`;
+            }
+        }
+
+        return `
+            <div class="game-playtime" style="color: ${playtimeColor}; font-size: 0.85em; margin-top: 4px;" title="Heures de jeu Steam${additionalInfo}">
+                🕒 ${playtimeFormatted}
+                ${game.rawPlaytimeMinutes ? `<span style="opacity: 0.7; font-size: 0.8em;"> (${game.rawPlaytimeMinutes}min API)</span>` : ''}
+            </div>
+        `;
+    }
+
+    // Si c'est un jeu Steam mais sans données de temps de jeu
+    if (game.platform === 'Steam' || (game.launchUrl && game.launchUrl.includes('steam://'))) {
+        return `
+            <div class="game-playtime" style="color: #666; font-size: 0.85em; margin-top: 4px;" title="Jeu Steam - heures non récupérées">
+                🕒 <span style="opacity: 0.7;">Steam non configuré</span>
+            </div>
+        `;
+    }
+
+    // Pour les autres plateformes, ne rien afficher
+    return '';
 }
 
 // Fonction pour déplacer une section à une position

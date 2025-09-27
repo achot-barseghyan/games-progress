@@ -1,5 +1,11 @@
 # Variables d'environnement - SECRETS - NE PAS COMMITER
 config.js
+.env
+.env.local
+.env.production
+
+# Fichiers de test avec clés
+test-steam.html
 
 # Logs
 npm-debug.log*
